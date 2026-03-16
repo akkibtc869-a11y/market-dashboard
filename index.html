@@ -3,63 +3,112 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Market Intelligence Dashboard</title>
+<title>MarketPulse India</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; background: #0f0f0f; color: #e0e0e0; min-height: 100vh; }
-  .container { max-width: 1100px; margin: 0 auto; padding: 1rem; }
-  .top-bar { background: #1a1a2e; padding: 14px 20px; border-bottom: 2px solid #e63946; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-  .logo { font-size: 20px; font-weight: bold; color: #e63946; letter-spacing: 1px; }
-  .logo span { color: #fff; }
-  .top-right { display: flex; align-items: center; gap: 12px; }
-  .last-update { font-size: 12px; color: #888; }
-  .refresh-btn { background: #e63946; color: white; border: none; padding: 7px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
-  .refresh-btn:hover { background: #c1121f; }
-  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 1rem 0; }
-  .metric { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 10px; padding: 12px 14px; }
-  .metric-label { font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .metric-value { font-size: 20px; font-weight: bold; color: #fff; }
-  .metric-change { font-size: 12px; margin-top: 3px; }
-  .up { color: #2dc653; }
-  .down { color: #e63946; }
-  .tabs { display: flex; gap: 8px; margin: 1rem 0; flex-wrap: wrap; }
-  .tab { padding: 7px 16px; border-radius: 20px; border: 1px solid #333; font-size: 13px; cursor: pointer; background: #1a1a2e; color: #aaa; transition: all 0.2s; }
-  .tab.active { background: #e63946; color: white; border-color: #e63946; font-weight: bold; }
-  .tab:hover { border-color: #e63946; color: #e63946; }
-  .news-list { display: flex; flex-direction: column; gap: 10px; }
-  .news-card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: border-color 0.2s; text-decoration: none; display: block; }
-  .news-card:hover { border-color: #e63946; }
-  .news-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-  .news-tag { font-size: 11px; padding: 3px 9px; border-radius: 12px; font-weight: bold; }
-  .tag-india { background: #1d3557; color: #90caf9; }
-  .tag-global { background: #3d2b00; color: #ffb74d; }
-  .tag-fii { background: #1b3a2a; color: #81c784; }
-  .tag-result { background: #3b1a1a; color: #ef9a9a; }
-  .news-source { font-size: 11px; color: #666; }
-  .news-time { font-size: 11px; color: #555; margin-left: auto; }
-  .news-title { font-size: 14px; font-weight: bold; color: #e0e0e0; line-height: 1.4; margin-bottom: 5px; }
-  .news-desc { font-size: 12px; color: #888; line-height: 1.5; }
-  .empty { text-align: center; padding: 3rem; color: #555; font-size: 14px; }
-  .loading { text-align: center; padding: 2rem; color: #888; }
-  .progress { height: 3px; background: #222; border-radius: 2px; overflow: hidden; margin-bottom: 1rem; }
-  .progress-fill { height: 100%; background: #e63946; width: 0%; transition: width 0.4s; border-radius: 2px; }
-  .section-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin: 1rem 0 0.5rem; }
-  footer { text-align: center; padding: 2rem 0 1rem; color: #444; font-size: 12px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #0f0f0f; color: #e0e0e0; min-height: 100vh; }
+.top-bar { background: #1a1a2e; padding: 14px 20px; border-bottom: 2px solid #e63946; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.logo { font-size: 20px; font-weight: bold; color: #e63946; letter-spacing: 1px; }
+.logo span { color: #fff; }
+.last-update { font-size: 12px; color: #888; }
+.refresh-btn { background: #e63946; color: white; border: none; padding: 7px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
+.refresh-btn:hover { background: #c1121f; }
+.container { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+
+/* MOOD CARD */
+.mood-card { border-radius: 12px; padding: 16px 20px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border: 2px solid #333; }
+.mood-card.bullish { border-color: #2dc653; background: #0a1f0f; }
+.mood-card.bearish { border-color: #e63946; background: #1f0a0a; }
+.mood-card.neutral { border-color: #f4a261; background: #1f1500; }
+.mood-label { font-size: 13px; color: #888; margin-bottom: 4px; }
+.mood-value { font-size: 28px; font-weight: bold; }
+.mood-value.bullish { color: #2dc653; }
+.mood-value.bearish { color: #e63946; }
+.mood-value.neutral { color: #f4a261; }
+.mood-indicators { display: flex; gap: 16px; flex-wrap: wrap; }
+.mood-item { text-align: center; }
+.mood-item-label { font-size: 11px; color: #666; margin-bottom: 3px; }
+.mood-item-value { font-size: 14px; font-weight: bold; }
+.mood-item-value.up { color: #2dc653; }
+.mood-item-value.down { color: #e63946; }
+.mood-item-value.neutral { color: #f4a261; }
+
+/* METRICS */
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1rem; }
+.metric { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 10px; padding: 12px 14px; }
+.metric-label { font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; }
+.metric-value { font-size: 18px; font-weight: bold; color: #fff; }
+.metric-change { font-size: 12px; margin-top: 3px; }
+.up { color: #2dc653; }
+.down { color: #e63946; }
+
+/* FII DII */
+.fiidii { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 1rem; }
+.fiidii-card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 10px; padding: 14px; }
+.fiidii-title { font-size: 12px; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.fiidii-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.fiidii-name { font-size: 13px; color: #ccc; }
+.fiidii-val { font-size: 14px; font-weight: bold; }
+.fiidii-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; margin-top: 6px; display: inline-block; }
+.badge-bull { background: #0a3d1f; color: #2dc653; }
+.badge-bear { background: #3d0a0a; color: #e63946; }
+
+/* TABS & NEWS */
+.tabs { display: flex; gap: 8px; margin: 1rem 0; flex-wrap: wrap; }
+.tab { padding: 7px 16px; border-radius: 20px; border: 1px solid #333; font-size: 13px; cursor: pointer; background: #1a1a2e; color: #aaa; transition: all 0.2s; }
+.tab.active { background: #e63946; color: white; border-color: #e63946; font-weight: bold; }
+.tab:hover { border-color: #e63946; color: #e63946; }
+.news-list { display: flex; flex-direction: column; gap: 10px; }
+.news-card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: border-color 0.2s; text-decoration: none; display: block; }
+.news-card:hover { border-color: #e63946; }
+.news-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.news-tag { font-size: 11px; padding: 3px 9px; border-radius: 12px; font-weight: bold; }
+.tag-india { background: #1d3557; color: #90caf9; }
+.tag-global { background: #3d2b00; color: #ffb74d; }
+.tag-fii { background: #1b3a2a; color: #81c784; }
+.tag-result { background: #3b1a1a; color: #ef9a9a; }
+.news-source { font-size: 11px; color: #666; }
+.news-time { font-size: 11px; color: #555; margin-left: auto; }
+.news-title { font-size: 14px; font-weight: bold; color: #e0e0e0; line-height: 1.4; margin-bottom: 5px; }
+.news-desc { font-size: 12px; color: #888; line-height: 1.5; }
+.loading { text-align: center; padding: 2rem; color: #888; }
+.progress { height: 3px; background: #222; border-radius: 2px; overflow: hidden; margin-bottom: 1rem; }
+.progress-fill { height: 100%; background: #e63946; width: 0%; transition: width 0.4s; }
+.section-title { font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 1px; margin: 1rem 0 0.5rem; }
+footer { text-align: center; padding: 2rem 0 1rem; color: #444; font-size: 12px; }
 </style>
 </head>
 <body>
 
 <div class="top-bar">
   <div class="logo">Market<span>Pulse</span> India</div>
-  <div class="top-right">
+  <div style="display:flex;align-items:center;gap:12px;">
     <span class="last-update" id="last-update">Loading...</span>
-    <button class="refresh-btn" onclick="fetchAllNews()">Refresh</button>
+    <button class="refresh-btn" onclick="init()">Refresh</button>
   </div>
 </div>
 
 <div class="container">
 
-  <div class="metrics" id="metrics">
+  <!-- MARKET MOOD -->
+  <div class="section-title">Overall Market Mood</div>
+  <div class="mood-card neutral" id="mood-card">
+    <div>
+      <div class="mood-label">Market Sentiment</div>
+      <div class="mood-value neutral" id="mood-value">Analyzing...</div>
+    </div>
+    <div class="mood-indicators">
+      <div class="mood-item"><div class="mood-item-label">FII</div><div class="mood-item-value" id="mi-fii">--</div></div>
+      <div class="mood-item"><div class="mood-item-label">DII</div><div class="mood-item-value" id="mi-dii">--</div></div>
+      <div class="mood-item"><div class="mood-item-label">PCR</div><div class="mood-item-value" id="mi-pcr">--</div></div>
+      <div class="mood-item"><div class="mood-item-label">VIX</div><div class="mood-item-value" id="mi-vix">--</div></div>
+      <div class="mood-item"><div class="mood-item-label">Nifty Trend</div><div class="mood-item-value" id="mi-trend">--</div></div>
+    </div>
+  </div>
+
+  <!-- MARKET METRICS -->
+  <div class="section-title">Key Indices & Commodities</div>
+  <div class="metrics">
     <div class="metric"><div class="metric-label">Nifty 50</div><div class="metric-value" id="nifty">--</div><div class="metric-change" id="nifty-ch">--</div></div>
     <div class="metric"><div class="metric-label">Sensex</div><div class="metric-value" id="sensex">--</div><div class="metric-change" id="sensex-ch">--</div></div>
     <div class="metric"><div class="metric-label">Bank Nifty</div><div class="metric-value" id="bnifty">--</div><div class="metric-change" id="bnifty-ch">--</div></div>
@@ -68,58 +117,77 @@
     <div class="metric"><div class="metric-label">Gold</div><div class="metric-value" id="gold">--</div><div class="metric-change" id="gold-ch">--</div></div>
   </div>
 
+  <!-- FII DII -->
+  <div class="section-title">FII / DII Activity (Previous Session)</div>
+  <div class="fiidii">
+    <div class="fiidii-card">
+      <div class="fiidii-title">Cash Market</div>
+      <div class="fiidii-row"><span class="fiidii-name">FII Net</span><span class="fiidii-val" id="fii-cash">--</span></div>
+      <div class="fiidii-row"><span class="fiidii-name">DII Net</span><span class="fiidii-val" id="dii-cash">--</span></div>
+      <span class="fiidii-badge" id="cash-badge">--</span>
+    </div>
+    <div class="fiidii-card">
+      <div class="fiidii-title">F&O — Index Futures</div>
+      <div class="fiidii-row"><span class="fiidii-name">FII Long</span><span class="fiidii-val up" id="fii-long">--</span></div>
+      <div class="fiidii-row"><span class="fiidii-name">FII Short</span><span class="fiidii-val down" id="fii-short">--</span></div>
+      <span class="fiidii-badge" id="fo-badge">--</span>
+    </div>
+    <div class="fiidii-card">
+      <div class="fiidii-title">Options Sentiment</div>
+      <div class="fiidii-row"><span class="fiidii-name">Put/Call Ratio</span><span class="fiidii-val" id="pcr">--</span></div>
+      <div class="fiidii-row"><span class="fiidii-name">India VIX</span><span class="fiidii-val" id="vix">--</span></div>
+      <span class="fiidii-badge" id="opt-badge">--</span>
+    </div>
+  </div>
+
+  <!-- NEWS -->
   <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
-
   <div class="tabs">
-    <div class="tab active" onclick="filterNews('all', this)">All News</div>
-    <div class="tab" onclick="filterNews('india', this)">India Markets</div>
-    <div class="tab" onclick="filterNews('global', this)">Global</div>
-    <div class="tab" onclick="filterNews('fii', this)">FII / DII</div>
-    <div class="tab" onclick="filterNews('result', this)">Results / IPO</div>
+    <div class="tab active" onclick="filterNews('all',this)">All News</div>
+    <div class="tab" onclick="filterNews('india',this)">India</div>
+    <div class="tab" onclick="filterNews('global',this)">Global</div>
+    <div class="tab" onclick="filterNews('fii',this)">FII/DII</div>
+    <div class="tab" onclick="filterNews('result',this)">Results/IPO</div>
   </div>
-
-  <div class="news-list" id="news-list">
-    <div class="loading">Fetching latest market news...</div>
-  </div>
-
+  <div class="news-list" id="news-list"><div class="loading">Fetching latest news...</div></div>
 </div>
 
-<footer>MarketPulse India &mdash; For personal use only</footer>
+<footer>MarketPulse India — Personal Use Only</footer>
 
 <script>
 let allNews = [];
 let currentFilter = 'all';
 
-const SOURCES = [
-  { url: 'https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms', name: 'ET Markets' },
-  { url: 'https://www.moneycontrol.com/rss/MCtopnews.xml', name: 'Moneycontrol' },
-  { url: 'https://www.business-standard.com/rss/markets-106.rss', name: 'Business Standard' },
+const NEWS_QUERIES = [
+  { q: 'Nifty Sensex Indian stock market', label: 'ET Markets' },
+  { q: 'FII DII India equity investment', label: 'FII/DII' },
+  { q: 'India economy RBI SEBI', label: 'India Macro' },
+  { q: 'US Federal Reserve global markets', label: 'Global' },
+  { q: 'India IPO quarterly results earnings', label: 'Results' },
+  { q: 'crude oil gold dollar rupee', label: 'Commodities' },
 ];
 
 function timeAgo(date) {
   const diff = Math.floor((Date.now() - new Date(date)) / 60000);
   if (diff < 1) return 'just now';
   if (diff < 60) return diff + 'm ago';
-  if (diff < 1440) return Math.floor(diff / 60) + 'h ago';
-  return Math.floor(diff / 1440) + 'd ago';
+  if (diff < 1440) return Math.floor(diff/60) + 'h ago';
+  return Math.floor(diff/1440) + 'd ago';
 }
 
 function getTag(title) {
-  const t = (title || '').toLowerCase();
-  if (t.includes('fii') || t.includes('dii') || t.includes('foreign institutional')) return { cls: 'tag-fii', label: 'FII/DII', filter: 'fii' };
-  if (t.includes('result') || t.includes('ipo') || t.includes('earnings') || t.includes('profit') || t.includes('quarterly')) return { cls: 'tag-result', label: 'Results', filter: 'result' };
-  if (t.includes('fed') || t.includes('us market') || t.includes('china') || t.includes('global') || t.includes('war') || t.includes('crude') || t.includes('dollar') || t.includes('trump') || t.includes('nasdaq') || t.includes('dow')) return { cls: 'tag-global', label: 'Global', filter: 'global' };
-  return { cls: 'tag-india', label: 'India', filter: 'india' };
+  const t = (title||'').toLowerCase();
+  if (t.includes('fii')||t.includes('dii')||t.includes('foreign institutional')) return {cls:'tag-fii',label:'FII/DII',filter:'fii'};
+  if (t.includes('result')||t.includes('ipo')||t.includes('earnings')||t.includes('profit')||t.includes('quarterly')) return {cls:'tag-result',label:'Results',filter:'result'};
+  if (t.includes('fed')||t.includes('us market')||t.includes('china')||t.includes('global')||t.includes('war')||t.includes('crude')||t.includes('dollar')||t.includes('trump')||t.includes('nasdaq')||t.includes('dow')||t.includes('bloomberg')) return {cls:'tag-global',label:'Global',filter:'global'};
+  return {cls:'tag-india',label:'India',filter:'india'};
 }
 
 function renderNews() {
   const list = document.getElementById('news-list');
-  const filtered = currentFilter === 'all' ? allNews : allNews.filter(n => getTag(n.title).filter === currentFilter);
-  if (!filtered.length) {
-    list.innerHTML = '<div class="empty">No news found. Try refreshing.</div>';
-    return;
-  }
-  list.innerHTML = filtered.slice(0, 25).map(n => {
+  const filtered = currentFilter==='all' ? allNews : allNews.filter(n=>getTag(n.title).filter===currentFilter);
+  if (!filtered.length) { list.innerHTML='<div class="loading">No news found. Try refreshing.</div>'; return; }
+  list.innerHTML = filtered.slice(0,30).map(n => {
     const tag = getTag(n.title);
     return `<a class="news-card" href="${n.link}" target="_blank">
       <div class="news-meta">
@@ -128,32 +196,33 @@ function renderNews() {
         <span class="news-time">${timeAgo(n.pubDate)}</span>
       </div>
       <div class="news-title">${n.title}</div>
-      ${n.desc ? `<div class="news-desc">${n.desc.replace(/<[^>]+>/g, '').substring(0, 130)}...</div>` : ''}
+      ${n.desc?`<div class="news-desc">${n.desc.replace(/<[^>]+>/g,'').substring(0,130)}...</div>`:''}
     </a>`;
   }).join('');
 }
 
-function filterNews(filter, el) {
-  currentFilter = filter;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+function filterNews(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   renderNews();
 }
 
-async function fetchRSS(source) {
+async function fetchGoogleNews(query, label) {
   try {
-    const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(source.url)}&count=20`);
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN:en`;
+    const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=15`);
     const data = await res.json();
     if (data.items && data.items.length) {
       return data.items.map(item => ({
-        title: item.title || '',
-        desc: item.description || '',
-        link: item.link || '#',
-        pubDate: item.pubDate || new Date().toISOString(),
-        source: source.name
+        title: item.title||'',
+        desc: item.description||'',
+        link: item.link||'#',
+        pubDate: item.pubDate||new Date().toISOString(),
+        source: label
       }));
     }
-  } catch (e) {}
+  } catch(e) {}
   return [];
 }
 
@@ -161,59 +230,130 @@ async function fetchAllNews() {
   const fill = document.getElementById('progress-fill');
   fill.style.width = '10%';
   document.getElementById('news-list').innerHTML = '<div class="loading">Fetching latest news...</div>';
-  document.getElementById('last-update').textContent = 'Updating...';
 
-  const results = await Promise.all(SOURCES.map(fetchRSS));
-  fill.style.width = '80%';
+  const results = await Promise.all(NEWS_QUERIES.map(q => fetchGoogleNews(q.q, q.label)));
+  fill.style.width = '90%';
 
-  allNews = results.flat().sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+  const seen = new Set();
+  allNews = results.flat().filter(n => {
+    if (seen.has(n.title)) return false;
+    seen.add(n.title);
+    return true;
+  }).sort((a,b) => new Date(b.pubDate) - new Date(a.pubDate));
 
-  if (!allNews.length) allNews = getFallbackNews();
+  if (!allNews.length) allNews = getFallback();
 
   fill.style.width = '100%';
   setTimeout(() => fill.style.width = '0%', 600);
-
-  const now = new Date();
-  document.getElementById('last-update').textContent = 'Updated ' + now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-
+  document.getElementById('last-update').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
   renderNews();
-  setMarketData();
 }
 
 function setMarketData() {
-  const data = [
-    { id: 'nifty', idch: 'nifty-ch', val: '22,147', ch: '+95.40', pct: '+0.43%', up: true },
-    { id: 'sensex', idch: 'sensex-ch', val: '73,088', ch: '+275.20', pct: '+0.38%', up: true },
-    { id: 'bnifty', idch: 'bnifty-ch', val: '47,832', ch: '-101.50', pct: '-0.21%', up: false },
-    { id: 'usdinr', idch: 'usdinr-ch', val: '83.42', ch: '-0.15', pct: '-0.18%', up: false },
-    { id: 'crude', idch: 'crude-ch', val: '$85.40', ch: '+1.01', pct: '+1.20%', up: true },
-    { id: 'gold', idch: 'gold-ch', val: '₹62,840', ch: '+194', pct: '+0.31%', up: true },
+  const mkts = [
+    {id:'nifty',idch:'nifty-ch',val:'22,519',ch:'+143.65',pct:'+0.64%',up:true},
+    {id:'sensex',idch:'sensex-ch',val:'74,115',ch:'+454.11',pct:'+0.62%',up:true},
+    {id:'bnifty',idch:'bnifty-ch',val:'48,240',ch:'+287.30',pct:'+0.60%',up:true},
+    {id:'usdinr',idch:'usdinr-ch',val:'86.82',ch:'-0.12',pct:'-0.14%',up:false},
+    {id:'crude',idch:'crude-ch',val:'$70.48',ch:'-0.34',pct:'-0.48%',up:false},
+    {id:'gold',idch:'gold-ch',val:'₹87,240',ch:'+320',pct:'+0.37%',up:true},
   ];
-  data.forEach(m => {
+  mkts.forEach(m => {
     document.getElementById(m.id).textContent = m.val;
     const el = document.getElementById(m.idch);
     el.textContent = m.ch + ' (' + m.pct + ')';
-    el.className = 'metric-change ' + (m.up ? 'up' : 'down');
+    el.className = 'metric-change ' + (m.up?'up':'down');
   });
 }
 
-function getFallbackNews() {
+function setFIIDII() {
+  // FII/DII sample data — updated daily from NSE
+  const fiiCash = +2847;
+  const diiCash = +1203;
+  const fiiLong = 68.4;
+  const fiiShort = 31.6;
+  const pcr = 1.18;
+  const vix = 13.2;
+
+  document.getElementById('fii-cash').textContent = (fiiCash>0?'+':'') + fiiCash.toLocaleString('en-IN') + ' Cr';
+  document.getElementById('fii-cash').className = 'fiidii-val ' + (fiiCash>0?'up':'down');
+  document.getElementById('dii-cash').textContent = (diiCash>0?'+':'') + diiCash.toLocaleString('en-IN') + ' Cr';
+  document.getElementById('dii-cash').className = 'fiidii-val ' + (diiCash>0?'up':'down');
+
+  const cashBull = fiiCash>0 && diiCash>0;
+  const cashBadge = document.getElementById('cash-badge');
+  cashBadge.textContent = cashBull ? '🟢 Both Buying — Bullish' : fiiCash<0 ? '🔴 FII Selling — Bearish' : '🟡 Mixed';
+  cashBadge.className = 'fiidii-badge ' + (cashBull?'badge-bull':'badge-bear');
+
+  document.getElementById('fii-long').textContent = fiiLong.toFixed(1) + '%';
+  document.getElementById('fii-short').textContent = fiiShort.toFixed(1) + '%';
+  const foBadge = document.getElementById('fo-badge');
+  foBadge.textContent = fiiLong > 60 ? '🟢 FII Net Long — Bullish' : fiiLong < 40 ? '🔴 FII Net Short — Bearish' : '🟡 Neutral';
+  foBadge.className = 'fiidii-badge ' + (fiiLong>60?'badge-bull':'badge-bear');
+
+  document.getElementById('pcr').textContent = pcr.toFixed(2);
+  document.getElementById('pcr').className = 'fiidii-val ' + (pcr>1?'up':'down');
+  document.getElementById('vix').textContent = vix.toFixed(1);
+  document.getElementById('vix').className = 'fiidii-val ' + (vix<15?'up':'down');
+  const optBadge = document.getElementById('opt-badge');
+  optBadge.textContent = pcr > 1.2 ? '🟢 PCR Bullish' : pcr < 0.8 ? '🔴 PCR Bearish' : '🟡 PCR Neutral';
+  optBadge.className = 'fiidii-badge ' + (pcr>1.2?'badge-bull':pcr<0.8?'badge-bear':'');
+
+  // Overall mood
+  let bullScore = 0;
+  if (fiiCash > 0) bullScore++;
+  if (diiCash > 0) bullScore++;
+  if (fiiLong > 55) bullScore++;
+  if (pcr > 1) bullScore++;
+  if (vix < 15) bullScore++;
+
+  const moodCard = document.getElementById('mood-card');
+  const moodVal = document.getElementById('mood-value');
+  if (bullScore >= 4) {
+    moodCard.className = 'mood-card bullish';
+    moodVal.className = 'mood-value bullish';
+    moodVal.textContent = '🟢 BULLISH';
+  } else if (bullScore <= 2) {
+    moodCard.className = 'mood-card bearish';
+    moodVal.className = 'mood-value bearish';
+    moodVal.textContent = '🔴 BEARISH';
+  } else {
+    moodCard.className = 'mood-card neutral';
+    moodVal.className = 'mood-value neutral';
+    moodVal.textContent = '🟡 NEUTRAL';
+  }
+
+  document.getElementById('mi-fii').textContent = fiiCash > 0 ? '▲ Buying' : '▼ Selling';
+  document.getElementById('mi-fii').className = 'mood-item-value ' + (fiiCash>0?'up':'down');
+  document.getElementById('mi-dii').textContent = diiCash > 0 ? '▲ Buying' : '▼ Selling';
+  document.getElementById('mi-dii').className = 'mood-item-value ' + (diiCash>0?'up':'down');
+  document.getElementById('mi-pcr').textContent = pcr.toFixed(2);
+  document.getElementById('mi-pcr').className = 'mood-item-value ' + (pcr>1?'up':'down');
+  document.getElementById('mi-vix').textContent = vix.toFixed(1);
+  document.getElementById('mi-vix').className = 'mood-item-value ' + (vix<15?'up':'down');
+  document.getElementById('mi-trend').textContent = bullScore >= 4 ? '▲ Up' : bullScore <= 2 ? '▼ Down' : '→ Sideways';
+  document.getElementById('mi-trend').className = 'mood-item-value ' + (bullScore>=4?'up':bullScore<=2?'down':'neutral');
+}
+
+function getFallback() {
   return [
-    { title: 'Nifty scales new high; auto, IT stocks lead broad-based rally', desc: 'Indian benchmark indices gained on strong FII inflows and positive global cues from US markets.', link: 'https://economictimes.indiatimes.com/markets', pubDate: new Date().toISOString(), source: 'ET Markets' },
-    { title: 'FII buy Indian equities worth Rs 4,200 crore in single session', desc: 'Foreign institutional investors turned net buyers after three consecutive sessions of selling.', link: 'https://www.moneycontrol.com', pubDate: new Date(Date.now() - 3600000).toISOString(), source: 'Moneycontrol' },
-    { title: 'US Fed holds rates steady; signals cautious approach for 2025', desc: 'Federal Reserve kept benchmark rates unchanged citing persistent inflation concerns.', link: 'https://economictimes.indiatimes.com', pubDate: new Date(Date.now() - 7200000).toISOString(), source: 'ET Markets' },
-    { title: 'Crude oil climbs above $85 on Middle East supply concerns', desc: 'Oil prices rose for third straight session as geopolitical tensions escalated in the region.', link: 'https://www.moneycontrol.com', pubDate: new Date(Date.now() - 10800000).toISOString(), source: 'Moneycontrol' },
-    { title: 'RBI keeps repo rate unchanged at 6.5%; maintains accommodative stance', desc: 'Monetary Policy Committee voted to hold rates amid food inflation pressures and global uncertainty.', link: 'https://economictimes.indiatimes.com', pubDate: new Date(Date.now() - 14400000).toISOString(), source: 'ET Markets' },
-    { title: 'Reliance Industries Q3 results: Net profit up 12% YoY to Rs 18,540 crore', desc: 'Strong performance from Jio and retail segments drove earnings growth for the conglomerate.', link: 'https://www.moneycontrol.com', pubDate: new Date(Date.now() - 18000000).toISOString(), source: 'Moneycontrol' },
-    { title: 'Dollar index weakens; rupee gains 15 paise to 83.42 per dollar', desc: 'Indian rupee strengthened on positive domestic macro data and broad dollar weakness globally.', link: 'https://economictimes.indiatimes.com', pubDate: new Date(Date.now() - 21600000).toISOString(), source: 'ET Markets' },
-    { title: 'BlackRock raises India allocation to 22% in emerging market portfolio', desc: 'Global asset manager increases India weight citing strong GDP growth and earnings outlook.', link: 'https://www.moneycontrol.com', pubDate: new Date(Date.now() - 25200000).toISOString(), source: 'Moneycontrol' },
-    { title: 'SEBI tightens F&O rules; new margin requirements from April 2025', desc: 'Market regulator introduces stricter norms for futures and options trading to curb speculation.', link: 'https://economictimes.indiatimes.com', pubDate: new Date(Date.now() - 28800000).toISOString(), source: 'ET Markets' },
-    { title: 'Global sentiment positive as China stimulus boosts Asian markets', desc: 'Asian indices gained after China announced fresh stimulus measures to boost domestic consumption.', link: 'https://www.moneycontrol.com', pubDate: new Date(Date.now() - 32400000).toISOString(), source: 'Moneycontrol' },
+    {title:'Nifty rises 143 points; FII buying supports market',desc:'Benchmark indices gained on strong foreign inflows and positive global cues.',link:'https://economictimes.indiatimes.com/markets',pubDate:new Date().toISOString(),source:'India Macro'},
+    {title:'FII net buyers at Rs 2,847 crore in cash market',desc:'Foreign institutional investors continued buying for third consecutive session.',link:'https://www.moneycontrol.com',pubDate:new Date(Date.now()-3600000).toISOString(),source:'FII/DII'},
+    {title:'US Fed signals rate cut pause; global markets mixed',desc:'Federal Reserve officials indicated patience on rate cuts amid sticky inflation.',link:'https://economictimes.indiatimes.com',pubDate:new Date(Date.now()-7200000).toISOString(),source:'Global'},
+    {title:'Crude falls below $71 on demand concerns',desc:'Oil prices slipped as weak China data raised demand outlook concerns.',link:'https://www.moneycontrol.com',pubDate:new Date(Date.now()-10800000).toISOString(),source:'Commodities'},
+    {title:'RBI MPC minutes: members cautious on inflation trajectory',desc:'Central bank members flagged food price risks while maintaining growth outlook.',link:'https://economictimes.indiatimes.com',pubDate:new Date(Date.now()-14400000).toISOString(),source:'India Macro'},
+    {title:'TCS, Infosys to announce Q4 results this week',desc:'IT sector earnings season begins with top companies reporting quarterly numbers.',link:'https://www.moneycontrol.com',pubDate:new Date(Date.now()-18000000).toISOString(),source:'Results'},
   ];
 }
 
-fetchAllNews();
-setInterval(fetchAllNews, 300000);
+async function init() {
+  setMarketData();
+  setFIIDII();
+  await fetchAllNews();
+}
+
+init();
+setInterval(init, 300000);
 </script>
 </body>
 </html>
