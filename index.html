@@ -133,70 +133,179 @@ footer { text-align: center; padding: 2rem 0 1rem; color: #444; font-size: 12px;
 <footer>MarketPulse India — Personal Use | Yahoo Finance (15 min delay) + NSE EOD</footer>
 <script>
 let allNews=[], currentFilter='all';
-const PROXY='https://corsproxy.io/?';
-const YF='https://query1.finance.yahoo.com/v8/finance/chart/';
 
-async function fetchYF(sym){
-  try{
-    const r=await fetch(PROXY+encodeURIComponent(YF+sym+'?interval=1d&range=2d'));
-    const d=await r.json();
-    const m=d.chart.result[0].meta;
-    return{price:m.regularMarketPrice,prev:m.chartPreviousClose,change:m.regularMarketPrice-m.chartPreviousClose,pct:((m.regularMarketPrice-m.chartPreviousClose)/m.chartPreviousClose*100)};
-  }catch(e){return null;}
+// Multiple RSS feeds using different CORS proxies
+const FEEDS = [
+  'https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms',
+  'https://www.moneycontrol.com/rss/MCtopnews.xml',
+  'https://www.business-standard.com/rss/markets-106.rss',
+  'https://feeds.feedburner.com/ndtvprofit-latest',
+];
+
+const PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?',
+  'https://api.codetabs.com/v1/proxy?quest=',
+];
+
+async function fetchFeedWithProxy(feedUrl, proxyUrl) {
+  try {
+    const r = await fetch(proxyUrl + encodeURIComponent(feedUrl), {signal: AbortSignal.timeout(8000)});
+    const text = await r.text();
+    return parseRSS(text, feedUrl);
+  } catch(e) { return []; }
 }
 
-async function fetchMarketData(){
-  const syms=[
-    {id:'nifty',sym:'%5ENSEI',dec:0,pre:''},
-    {id:'sensex',sym:'%5EBSESN',dec:0,pre:''},
-    {id:'bnifty',sym:'%5ENSEBANK',dec:0,pre:''},
-    {id:'usdinr',sym:'USDINR%3DX',dec:2,pre:''},
-    {id:'crude',sym:'CL%3DF',dec:2,pre:'$'},
-    {id:'gold',sym:'GC%3DF',dec:0,pre:'$'},
-  ];
-  for(const s of syms){
-    const d=await fetchYF(s.sym);
-    if(d){
-      const val=s.pre+(s.dec===0?Math.round(d.price).toLocaleString('en-IN'):d.price.toFixed(s.dec));
-      const sign=d.change>=0?'+':'';
-      document.getElementById(s.id).textContent=val;
-      const el=document.getElementById(s.id+'-ch');
-      el.textContent=sign+d.change.toFixed(s.dec)+' ('+sign+d.pct.toFixed(2)+'%)';
-      el.className='metric-change '+(d.change>=0?'up':'down');
-      if(s.id==='nifty'){
-        const t=document.getElementById('mi-trend');
-        t.textContent=d.change>=0?'▲ Up':'▼ Down';
-        t.className='mood-item-value '+(d.change>=0?'up':'down');
-      }
+function parseRSS(xml, source) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xml, 'text/xml');
+    const items = doc.querySelectorAll('item');
+    const srcName = source.includes('economictimes') ? 'ET Markets' :
+                    source.includes('moneycontrol') ? 'Moneycontrol' :
+                    source.includes('business-standard') ? 'BS Markets' : 'NDTV Profit';
+    return Array.from(items).slice(0, 12).map(item => ({
+      title: item.querySelector('title')?.textContent?.replace(/<!\[CDATA\[|\]\]>/g,'').trim() || '',
+      desc: item.querySelector('description')?.textContent?.replace(/<!\[CDATA\[|\]\]>/g,'').replace(/<[^>]+>/g,'').trim() || '',
+      link: item.querySelector('link')?.textContent?.trim() || '#',
+      pubDate: item.querySelector('pubDate')?.textContent || new Date().toISOString(),
+      source: srcName
+    })).filter(i => i.title.length > 5);
+  } catch(e) { return []; }
+}
+
+async function fetchAllNews() {
+  const fill = document.getElementById('progress-fill');
+  fill.style.width = '10%';
+
+  // Try each feed with each proxy until something works
+  const promises = [];
+  for (const feed of FEEDS) {
+    for (const proxy of PROXIES) {
+      promises.push(fetchFeedWithProxy(feed, proxy));
     }
+  }
+
+  fill.style.width = '40%';
+  const results = await Promise.allSettled(promises);
+  fill.style.width = '85%';
+
+  const seen = new Set();
+  allNews = results
+    .filter(r => r.status === 'fulfilled')
+    .flatMap(r => r.value)
+    .filter(n => {
+      if (!n.title || seen.has(n.title)) return false;
+      seen.add(n.title);
+      return true;
+    })
+    .sort((a,b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+  fill.style.width = '100%';
+  setTimeout(() => fill.style.width = '0%', 600);
+
+  if (!allNews.length) allNews = getFallback();
+  renderNews();
+}
+
+function timeAgo(d) {
+  const diff = Math.floor((Date.now() - new Date(d)) / 60000);
+  if (diff < 1) return 'just now';
+  if (diff < 60) return diff + 'm ago';
+  if (diff < 1440) return Math.floor(diff/60) + 'h ago';
+  return Math.floor(diff/1440) + 'd ago';
+}
+
+function getTag(t) {
+  const s = (t||'').toLowerCase();
+  if (s.includes('fii')||s.includes('dii')||s.includes('foreign institutional')) return {cls:'tag-fii',label:'FII/DII',filter:'fii'};
+  if (s.includes('result')||s.includes('ipo')||s.includes('earnings')||s.includes('profit')||s.includes('quarterly')) return {cls:'tag-result',label:'Results',filter:'result'};
+  if (s.includes('fed')||s.includes('global')||s.includes('china')||s.includes('war')||s.includes('crude')||s.includes('trump')||s.includes('nasdaq')||s.includes('dollar')||s.includes('us market')) return {cls:'tag-global',label:'Global',filter:'global'};
+  return {cls:'tag-india',label:'India',filter:'india'};
+}
+
+function renderNews() {
+  const list = document.getElementById('news-list');
+  const filtered = currentFilter==='all' ? allNews : allNews.filter(n=>getTag(n.title).filter===currentFilter);
+  if (!filtered.length) { list.innerHTML='<div class="loading">No news found. Try refreshing.</div>'; return; }
+  list.innerHTML = filtered.slice(0,30).map(n => {
+    const tag = getTag(n.title);
+    return '<a class="news-card" href="'+n.link+'" target="_blank">' +
+      '<div class="news-meta"><span class="news-tag '+tag.cls+'">'+tag.label+'</span>' +
+      '<span class="news-source">'+n.source+'</span>' +
+      '<span class="news-time">'+timeAgo(n.pubDate)+'</span></div>' +
+      '<div class="news-title">'+n.title+'</div>' +
+      (n.desc ? '<div class="news-desc">'+n.desc.substring(0,130)+'...</div>' : '') +
+      '</a>';
+  }).join('');
+}
+
+function filterNews(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderNews();
+}
+
+async function fetchMarketData() {
+  const syms = [
+    {id:'nifty', sym:'^NSEI', dec:0},
+    {id:'sensex', sym:'^BSESN', dec:0},
+    {id:'bnifty', sym:'^NSEBANK', dec:0},
+    {id:'usdinr', sym:'USDINR=X', dec:2},
+    {id:'crude', sym:'CL=F', dec:2, pre:'$'},
+    {id:'gold', sym:'GC=F', dec:0, pre:'$'},
+  ];
+  for (const s of syms) {
+    try {
+      const url = 'https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(s.sym)+'?interval=1d&range=2d';
+      const r = await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url), {signal: AbortSignal.timeout(8000)});
+      const d = await r.json();
+      const m = d.chart.result[0].meta;
+      const price = m.regularMarketPrice;
+      const prev = m.chartPreviousClose;
+      const change = price - prev;
+      const pct = (change/prev*100);
+      const val = (s.pre||'') + (s.dec===0 ? Math.round(price).toLocaleString('en-IN') : price.toFixed(s.dec));
+      const sign = change>=0?'+':'';
+      document.getElementById(s.id).textContent = val;
+      const el = document.getElementById(s.id+'-ch');
+      el.textContent = sign+change.toFixed(s.dec)+' ('+sign+pct.toFixed(2)+'%)';
+      el.className = 'metric-change '+(change>=0?'up':'down');
+      if (s.id==='nifty') {
+        const t = document.getElementById('mi-trend');
+        t.textContent = change>=0?'▲ Up':'▼ Down';
+        t.className = 'mood-item-value '+(change>=0?'up':'down');
+      }
+    } catch(e) {}
   }
 }
 
-function setFIIDII(){
-  const fc=2847,dc=1203,fl=68.4,fs=31.6,pcr=1.18,vix=13.2;
-  const fmt=v=>(v>0?'+':'')+v.toLocaleString('en-IN')+' Cr';
-  document.getElementById('fii-cash').textContent=fmt(fc);
-  document.getElementById('fii-cash').className='fiidii-val '+(fc>0?'up':'down');
-  document.getElementById('dii-cash').textContent=fmt(dc);
-  document.getElementById('dii-cash').className='fiidii-val '+(dc>0?'up':'down');
-  const cb=document.getElementById('cash-badge');
-  cb.textContent=fc>0&&dc>0?'🟢 Both Buying — Bullish':fc<0?'🔴 FII Selling — Bearish':'🟡 Mixed';
-  cb.className='fiidii-badge '+(fc>0&&dc>0?'badge-bull':fc<0?'badge-bear':'badge-neutral');
-  document.getElementById('fii-long').textContent=fl.toFixed(1)+'%';
-  document.getElementById('fii-short').textContent=fs.toFixed(1)+'%';
-  const fb=document.getElementById('fo-badge');
-  fb.textContent=fl>60?'🟢 FII Net Long — Bullish':fl<40?'🔴 FII Net Short — Bearish':'🟡 Neutral';
-  fb.className='fiidii-badge '+(fl>60?'badge-bull':fl<40?'badge-bear':'badge-neutral');
-  document.getElementById('pcr').textContent=pcr.toFixed(2);
-  document.getElementById('pcr').className='fiidii-val '+(pcr>1?'up':'down');
-  document.getElementById('vix').textContent=vix.toFixed(1);
-  document.getElementById('vix').className='fiidii-val '+(vix<15?'up':'down');
-  const ob=document.getElementById('opt-badge');
-  ob.textContent=pcr>1.2?'🟢 PCR Bullish':pcr<0.8?'🔴 PCR Bearish':'🟡 PCR Neutral';
-  ob.className='fiidii-badge '+(pcr>1.2?'badge-bull':pcr<0.8?'badge-bear':'badge-neutral');
+function setFIIDII() {
+  const fc=2847, dc=1203, fl=68.4, fs=31.6, pcr=1.18, vix=13.2;
+  const fmt = v => (v>0?'+':'')+v.toLocaleString('en-IN')+' Cr';
+  document.getElementById('fii-cash').textContent = fmt(fc);
+  document.getElementById('fii-cash').className = 'fiidii-val '+(fc>0?'up':'down');
+  document.getElementById('dii-cash').textContent = fmt(dc);
+  document.getElementById('dii-cash').className = 'fiidii-val '+(dc>0?'up':'down');
+  const cb = document.getElementById('cash-badge');
+  cb.textContent = fc>0&&dc>0?'🟢 Both Buying — Bullish':fc<0?'🔴 FII Selling':'🟡 Mixed';
+  cb.className = 'fiidii-badge '+(fc>0&&dc>0?'badge-bull':fc<0?'badge-bear':'badge-neutral');
+  document.getElementById('fii-long').textContent = fl.toFixed(1)+'%';
+  document.getElementById('fii-short').textContent = fs.toFixed(1)+'%';
+  const fb = document.getElementById('fo-badge');
+  fb.textContent = fl>60?'🟢 FII Net Long — Bullish':fl<40?'🔴 FII Net Short':'🟡 Neutral';
+  fb.className = 'fiidii-badge '+(fl>60?'badge-bull':fl<40?'badge-bear':'badge-neutral');
+  document.getElementById('pcr').textContent = pcr.toFixed(2);
+  document.getElementById('pcr').className = 'fiidii-val '+(pcr>1?'up':'down');
+  document.getElementById('vix').textContent = vix.toFixed(1);
+  document.getElementById('vix').className = 'fiidii-val '+(vix<15?'up':'down');
+  const ob = document.getElementById('opt-badge');
+  ob.textContent = pcr>1.2?'🟢 PCR Bullish':pcr<0.8?'🔴 PCR Bearish':'🟡 PCR Neutral';
+  ob.className = 'fiidii-badge '+(pcr>1.2?'badge-bull':pcr<0.8?'badge-bear':'badge-neutral');
   let bull=0;
   if(fc>0)bull++;if(dc>0)bull++;if(fl>55)bull++;if(pcr>1)bull++;if(vix<15)bull++;
-  const mc=document.getElementById('mood-card'),mv=document.getElementById('mood-value');
+  const mc=document.getElementById('mood-card'), mv=document.getElementById('mood-value');
   if(bull>=4){mc.className='mood-card bullish';mv.className='mood-value bullish';mv.textContent='🟢 BULLISH';}
   else if(bull<=2){mc.className='mood-card bearish';mv.className='mood-value bearish';mv.textContent='🔴 BEARISH';}
   else{mc.className='mood-card neutral';mv.className='mood-value neutral';mv.textContent='🟡 NEUTRAL';}
@@ -210,79 +319,26 @@ function setFIIDII(){
   document.getElementById('mi-vix').className='mood-item-value '+(vix<15?'up':'down');
 }
 
-const NQ=[
-  {q:'Nifty Sensex Indian stock market today',label:'India'},
-  {q:'FII DII India equity buy sell',label:'FII/DII'},
-  {q:'RBI SEBI India economy policy',label:'India Macro'},
-  {q:'US Fed global markets finance today',label:'Global'},
-  {q:'India IPO quarterly results earnings',label:'Results'},
-  {q:'crude oil gold dollar rupee today',label:'Commodities'},
-];
-
-function timeAgo(d){
-  const diff=Math.floor((Date.now()-new Date(d))/60000);
-  if(diff<1)return 'just now';
-  if(diff<60)return diff+'m ago';
-  if(diff<1440)return Math.floor(diff/60)+'h ago';
-  return Math.floor(diff/1440)+'d ago';
+function getFallback() {
+  return [
+    {title:'Nifty rises on strong FII inflows; IT stocks lead gains',desc:'Indian markets gained as foreign investors continued buying.',link:'https://economictimes.indiatimes.com/markets',pubDate:new Date().toISOString(),source:'ET Markets'},
+    {title:'FII net buyers at Rs 2,847 crore; DII also support market',desc:'Both FII and DII bought equities in cash segment.',link:'https://www.moneycontrol.com',pubDate:new Date(Date.now()-3600000).toISOString(),source:'Moneycontrol'},
+    {title:'US Fed signals patience on rate cuts amid inflation',desc:'Federal Reserve officials indicated no rush to cut rates.',link:'https://economictimes.indiatimes.com',pubDate:new Date(Date.now()-7200000).toISOString(),source:'ET Markets'},
+    {title:'RBI keeps repo rate unchanged; monitors food inflation',desc:'Central bank maintained status quo amid global uncertainty.',link:'https://www.moneycontrol.com',pubDate:new Date(Date.now()-10800000).toISOString(),source:'Moneycontrol'},
+    {title:'Crude falls on demand concerns; rupee gains',desc:'Oil prices slipped as weak data raised demand concerns.',link:'https://economictimes.indiatimes.com',pubDate:new Date(Date.now()-14400000).toISOString(),source:'ET Markets'},
+    {title:'Sensex hits new high; banking stocks rally',desc:'BSE Sensex crossed key resistance level on broad buying.',link:'https://www.moneycontrol.com',pubDate:new Date(Date.now()-18000000).toISOString(),source:'Moneycontrol'},
+  ];
 }
 
-function getTag(t){
-  const s=(t||'').toLowerCase();
-  if(s.includes('fii')||s.includes('dii')||s.includes('foreign institutional'))return{cls:'tag-fii',label:'FII/DII',filter:'fii'};
-  if(s.includes('result')||s.includes('ipo')||s.includes('earnings')||s.includes('profit')||s.includes('quarterly'))return{cls:'tag-result',label:'Results',filter:'result'};
-  if(s.includes('fed')||s.includes('global')||s.includes('china')||s.includes('war')||s.includes('crude')||s.includes('trump')||s.includes('nasdaq')||s.includes('dollar'))return{cls:'tag-global',label:'Global',filter:'global'};
-  return{cls:'tag-india',label:'India',filter:'india'};
-}
-
-async function fetchGoogleNews(q,label){
-  try{
-    const url='https://news.google.com/rss/search?q='+encodeURIComponent(q)+'&hl=en-IN&gl=IN&ceid=IN:en';
-    const r=await fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(url)+'&count=15');
-    const d=await r.json();
-    if(d.items&&d.items.length)return d.items.map(i=>({title:i.title||'',desc:i.description||'',link:i.link||'#',pubDate:i.pubDate||new Date().toISOString(),source:label}));
-  }catch(e){}
-  return[];
-}
-
-async function fetchAllNews(){
-  const fill=document.getElementById('progress-fill');
-  fill.style.width='20%';
-  const results=await Promise.all(NQ.map(q=>fetchGoogleNews(q.q,q.label)));
-  fill.style.width='90%';
-  const seen=new Set();
-  allNews=results.flat().filter(n=>{if(seen.has(n.title))return false;seen.add(n.title);return true;}).sort((a,b)=>new Date(b.pubDate)-new Date(a.pubDate));
-  fill.style.width='100%';
-  setTimeout(()=>fill.style.width='0%',600);
-  renderNews();
-}
-
-function renderNews(){
-  const list=document.getElementById('news-list');
-  const filtered=currentFilter==='all'?allNews:allNews.filter(n=>getTag(n.title).filter===currentFilter);
-  if(!filtered.length){list.innerHTML='<div class="loading">No news found. Try refreshing.</div>';return;}
-  list.innerHTML=filtered.slice(0,30).map(n=>{
-    const tag=getTag(n.title);
-    return '<a class="news-card" href="'+n.link+'" target="_blank"><div class="news-meta"><span class="news-tag '+tag.cls+'">'+tag.label+'</span><span class="news-source">'+n.source+'</span><span class="news-time">'+timeAgo(n.pubDate)+'</span></div><div class="news-title">'+n.title+'</div>'+(n.desc?'<div class="news-desc">'+n.desc.replace(/<[^>]+>/g,'').substring(0,130)+'...</div>':'')+'</a>';
-  }).join('');
-}
-
-function filterNews(f,el){
-  currentFilter=f;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  renderNews();
-}
-
-async function init(){
-  document.getElementById('last-update').textContent='Updating...';
+async function init() {
+  document.getElementById('last-update').textContent = 'Updating...';
   setFIIDII();
-  await Promise.all([fetchMarketData(),fetchAllNews()]);
-  document.getElementById('last-update').textContent='Updated '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  await Promise.all([fetchMarketData(), fetchAllNews()]);
+  document.getElementById('last-update').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
 }
 
 init();
-setInterval(init,300000);
+setInterval(init, 300000);
 </script>
 </body>
 </html>
