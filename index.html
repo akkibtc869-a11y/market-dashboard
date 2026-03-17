@@ -286,7 +286,7 @@ let newsFilter = 'all';
 
 // ── Auth ──────────────────────────────────────────────
 function loginUpstox() {
-  const key = UPSTOX_API_KEY !== 'YOUR_UPSTOX_API_KEY' ? UPSTOX_API_KEY : prompt('Enter your Upstox API Key:');
+  const key = UPSTOX_API_KEY !== '66ed6d25-6878-462e-bbdb-2c9c9852be9b' ? UPSTOX_API_KEY : prompt('Enter your Upstox API Key:');
   if (!key) return;
   const redirect = encodeURIComponent('https://market-dashboard-rosy.vercel.app/api/auth');
   window.location.href = `https://api.upstox.com/v2/login/authorization/dialog?response_type=code&client_id=${key}&redirect_uri=${redirect}`;
