@@ -19,15 +19,13 @@ export default async function handler(req, res) {
   res.setHeader('Pragma', 'no-cache');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const token = req.headers.authorization?.replace('Bearer ', '') || req.query.token;
-  if (!token) return res.status(401).json({ error: 'No access token' });
+  // Use env token directly — no OAuth needed
+  const token = process.env.UPSTOX_ACCESS_TOKEN;
+  if (!token) return res.status(500).json({ error: 'UPSTOX_ACCESS_TOKEN not set in Vercel env' });
 
   try {
-    // Upstox requires comma-separated instrument keys as a single query param
     const keys = Object.values(INSTRUMENTS).join(',');
     const url = `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${encodeURIComponent(keys)}`;
-    
-    console.log('Fetching:', url.substring(0, 120));
     
     const quoteRes = await fetch(url, { 
       headers: { 
@@ -38,21 +36,14 @@ export default async function handler(req, res) {
     
     const quoteData = await quoteRes.json();
     console.log('HTTP Status:', quoteRes.status);
-    console.log('Response status:', quoteData.status);
-    console.log('Data keys available:', JSON.stringify(Object.keys(quoteData.data || {})));
+    console.log('Response keys:', JSON.stringify(Object.keys(quoteData.data || {})));
 
     if (quoteData.status === 'error') throw new Error(JSON.stringify(quoteData.errors));
-    if (!quoteRes.ok) throw new Error(`HTTP ${quoteRes.status}`);
 
     const result = {};
-    const availableKeys = Object.keys(quoteData.data || {});
-    
     for (const [name, instrKey] of Object.entries(INSTRUMENTS)) {
       const q = quoteData.data?.[instrKey];
-      if (!q) { 
-        console.log(`No data for [${instrKey}]`); 
-        continue; 
-      }
+      if (!q) continue;
       const ltp = q.last_price || 0;
       const prev = q.ohlc?.close || ltp;
       const ch = ltp - prev;
@@ -66,8 +57,6 @@ export default async function handler(req, res) {
       };
     }
 
-    console.log('Successfully parsed:', Object.keys(result));
-
     // Sector mood
     const sectors = ['niftyit','niftyauto','niftypharma','niftyfmcg','niftymetal','niftyrealty','niftyenergy','niftyinfra'];
     let bullCount = 0, bearCount = 0;
@@ -80,9 +69,7 @@ export default async function handler(req, res) {
       bullCount, bearCount
     };
 
-    result._availableKeys = availableKeys;
     return res.status(200).json(result);
-
   } catch (err) {
     console.error('Market error:', err.message);
     return res.status(500).json({ error: err.message });
