@@ -280,18 +280,11 @@ function logout() {
 }
 
 function showLogin() {
-  document.getElementById('connect-banner').style.display = 'flex';
   document.getElementById('dashboard').style.display = 'block';
-  document.getElementById('refresh-btn').style.display = 'inline-flex';
-  document.getElementById('logout-btn').style.display = 'none';
-  fetchNews();
 }
 
 function showDashboard() {
-  document.getElementById('connect-banner').style.display = 'none';
   document.getElementById('dashboard').style.display = 'block';
-  document.getElementById('refresh-btn').style.display = 'inline-flex';
-  document.getElementById('logout-btn').style.display = 'inline-flex';
 }
 
 // ── Init ──────────────────────────────────────────────
