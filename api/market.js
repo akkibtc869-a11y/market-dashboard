@@ -1,6 +1,6 @@
 const INSTRUMENTS = {
   nifty:       'NSE_INDEX|Nifty 50',
-  sensex:      'BSE_INDEX|SENSEX',
+  sensex:      'BSE_INDEX|Sensex',
   banknifty:   'NSE_INDEX|Nifty Bank',
   vix:         'NSE_INDEX|India VIX',
   niftyit:     'NSE_INDEX|Nifty IT',
@@ -15,8 +15,6 @@ const INSTRUMENTS = {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -25,27 +23,38 @@ export default async function handler(req, res) {
   if (!token) return res.status(401).json({ error: 'No access token' });
 
   try {
-    const keys = Object.values(INSTRUMENTS).join(',');
-    console.log('Fetching market data with token:', token.substring(0, 10) + '...');
+    // First fetch all instrument keys from Upstox to verify correct names
+    const keys = Object.values(INSTRUMENTS).map(k => encodeURIComponent(k)).join('%2C');
+    const url = `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${keys}`;
     
-    const quoteRes = await fetch(
-      `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${encodeURIComponent(keys)}`,
-      { 
-        headers: { 
-          'Authorization': `Bearer ${token}`, 
-          'Accept': 'application/json' 
-        } 
-      }
-    );
+    console.log('Fetching URL:', url.substring(0, 100));
+    
+    const quoteRes = await fetch(url, { 
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Accept': 'application/json' 
+      } 
+    });
     const quoteData = await quoteRes.json();
-    console.log('Upstox response status:', quoteRes.status);
-    
+    console.log('Status:', quoteRes.status);
+    console.log('Data keys:', Object.keys(quoteData.data || {}));
+
     if (!quoteRes.ok) throw new Error(JSON.stringify(quoteData));
 
     const result = {};
-    for (const [name, key] of Object.entries(INSTRUMENTS)) {
-      const q = quoteData.data?.[key];
-      if (!q) { console.log('Missing data for:', key); continue; }
+    const dataKeys = Object.keys(quoteData.data || {});
+    
+    // Map response keys back to our names
+    for (const [name, instrKey] of Object.entries(INSTRUMENTS)) {
+      // Try exact match first, then case-insensitive
+      let q = quoteData.data?.[instrKey];
+      if (!q) {
+        // Try finding by partial match
+        const found = dataKeys.find(k => k.toLowerCase() === instrKey.toLowerCase());
+        if (found) q = quoteData.data[found];
+      }
+      if (!q) { console.log('No data for:', instrKey); continue; }
+      
       const ltp = q.last_price || 0;
       const prev = q.ohlc?.close || ltp;
       const ch = ltp - prev;
@@ -59,6 +68,8 @@ export default async function handler(req, res) {
       };
     }
 
+    console.log('Parsed result keys:', Object.keys(result));
+
     // Sector mood
     const sectors = ['niftyit','niftyauto','niftypharma','niftyfmcg','niftymetal','niftyrealty','niftyenergy','niftyinfra'];
     let bullCount = 0, bearCount = 0;
@@ -71,7 +82,9 @@ export default async function handler(req, res) {
       bullCount, bearCount
     };
 
-    console.log('Market data fetched successfully:', Object.keys(result));
+    // Include raw data keys for debugging
+    result._availableKeys = dataKeys;
+
     return res.status(200).json(result);
   } catch (err) {
     console.error('Market error:', err.message);
