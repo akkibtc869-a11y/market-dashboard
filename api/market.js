@@ -1,40 +1,51 @@
 const INSTRUMENTS = {
-  nifty:     'NSE_INDEX|Nifty 50',
-  sensex:    'BSE_INDEX|SENSEX',
-  banknifty: 'NSE_INDEX|Nifty Bank',
-  vix:       'NSE_INDEX|India VIX',
-  niftyit:   'NSE_INDEX|Nifty IT',
-  niftyauto: 'NSE_INDEX|Nifty Auto',
+  nifty:       'NSE_INDEX|Nifty 50',
+  sensex:      'BSE_INDEX|SENSEX',
+  banknifty:   'NSE_INDEX|Nifty Bank',
+  vix:         'NSE_INDEX|India VIX',
+  niftyit:     'NSE_INDEX|Nifty IT',
+  niftyauto:   'NSE_INDEX|Nifty Auto',
   niftypharma: 'NSE_INDEX|Nifty Pharma',
-  niftyfmcg: 'NSE_INDEX|Nifty FMCG',
-  niftymetal: 'NSE_INDEX|Nifty Metal',
+  niftyfmcg:   'NSE_INDEX|Nifty FMCG',
+  niftymetal:  'NSE_INDEX|Nifty Metal',
   niftyrealty: 'NSE_INDEX|Nifty Realty',
   niftyenergy: 'NSE_INDEX|Nifty Energy',
-  niftyinfra: 'NSE_INDEX|Nifty Infra',
+  niftyinfra:  'NSE_INDEX|Nifty Infra',
 };
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const token = req.headers.authorization?.replace('Bearer ', '');
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.query.token;
   if (!token) return res.status(401).json({ error: 'No access token' });
 
   try {
     const keys = Object.values(INSTRUMENTS).join(',');
+    console.log('Fetching market data with token:', token.substring(0, 10) + '...');
+    
     const quoteRes = await fetch(
       `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${encodeURIComponent(keys)}`,
-      { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }
+      { 
+        headers: { 
+          'Authorization': `Bearer ${token}`, 
+          'Accept': 'application/json' 
+        } 
+      }
     );
     const quoteData = await quoteRes.json();
-    if (!quoteRes.ok) throw new Error(quoteData.message || 'Upstox API error');
+    console.log('Upstox response status:', quoteRes.status);
+    
+    if (!quoteRes.ok) throw new Error(JSON.stringify(quoteData));
 
     const result = {};
     for (const [name, key] of Object.entries(INSTRUMENTS)) {
       const q = quoteData.data?.[key];
-      if (!q) continue;
+      if (!q) { console.log('Missing data for:', key); continue; }
       const ltp = q.last_price || 0;
       const prev = q.ohlc?.close || ltp;
       const ch = ltp - prev;
@@ -48,7 +59,7 @@ export default async function handler(req, res) {
       };
     }
 
-    // Sector mood — based on change %
+    // Sector mood
     const sectors = ['niftyit','niftyauto','niftypharma','niftyfmcg','niftymetal','niftyrealty','niftyenergy','niftyinfra'];
     let bullCount = 0, bearCount = 0;
     sectors.forEach(s => { if (result[s]) { result[s].up ? bullCount++ : bearCount++; } });
@@ -60,9 +71,10 @@ export default async function handler(req, res) {
       bullCount, bearCount
     };
 
+    console.log('Market data fetched successfully:', Object.keys(result));
     return res.status(200).json(result);
   } catch (err) {
-    console.error('Market error:', err);
+    console.error('Market error:', err.message);
     return res.status(500).json({ error: err.message });
   }
 }
