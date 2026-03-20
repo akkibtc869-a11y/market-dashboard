@@ -154,17 +154,13 @@ footer { text-align: center; padding: 2rem 0 1rem; color: var(--text3); font-siz
     <button class="btn btn-outline" id="refresh-btn" onclick="refreshAll()" style="display:none;">
       <span id="refresh-icon">↻</span> Refresh
     </button>
-    <button class="btn btn-outline" id="logout-btn" onclick="logout()" style="display:none;">Logout</button>
+    
   </div>
 </div>
 
 <div class="progress"><div class="progress-fill" id="progress"></div></div>
 
-<!-- CONNECT BANNER -->
-<div id="connect-banner" style="display:none; background:#fff8f0; border-bottom:1px solid #fde8cc; padding:10px 24px; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between;">
-  <span style="font-size:13px; color:#92600a;">⚡ Connect Upstox for live Nifty, Sensex & sector data</span>
-  <button class="btn btn-primary" style="padding:6px 16px; font-size:12px;" onclick="loginUpstox()">Connect with Upstox →</button>
-</div>
+
 
 <!-- DASHBOARD -->
 <div class="main" id="dashboard">
@@ -299,17 +295,30 @@ function showDashboard() {
 }
 
 // ── Init ──────────────────────────────────────────────
+function getCookie(name) {
+  const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+  return v ? v[2] : null;
+}
+
 window.addEventListener('load', () => {
-  // Check for token in URL (from OAuth callback)
+  // Check token from URL param, localStorage, sessionStorage, or cookie
   const params = new URLSearchParams(window.location.search);
   const urlToken = params.get('token');
+  
   if (urlToken) {
     accessToken = urlToken;
     localStorage.setItem('upstox_token', urlToken);
+    sessionStorage.setItem('upstox_token', urlToken);
     window.history.replaceState({}, '', '/');
   } else {
-    accessToken = localStorage.getItem('upstox_token');
+    accessToken = localStorage.getItem('upstox_token') 
+      || sessionStorage.getItem('upstox_token')
+      || getCookie('upstox_token');
+    if (accessToken) {
+      localStorage.setItem('upstox_token', accessToken);
+    }
   }
+  
   if (accessToken) { showDashboard(); refreshAll(); }
   else showLogin();
 });
@@ -337,10 +346,7 @@ async function refreshAll() {
 // ── Market Data ───────────────────────────────────────
 async function fetchMarket() {
   try {
-    const res = await fetch('/api/market', {
-      headers: { 'Authorization': 'Bearer ' + accessToken }
-    });
-    if (res.status === 401) { logout(); return; }
+    const res = await fetch('/api/market');
     const d = await res.json();
     if (d.error) throw new Error(d.error);
     renderMarket(d);
