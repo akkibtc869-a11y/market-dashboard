@@ -23,11 +23,11 @@ export default async function handler(req, res) {
   if (!token) return res.status(401).json({ error: 'No access token' });
 
   try {
-    // First fetch all instrument keys from Upstox to verify correct names
-    const keys = Object.values(INSTRUMENTS).map(k => encodeURIComponent(k)).join('%2C');
-    const url = `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${keys}`;
+    // Upstox requires comma-separated instrument keys as a single query param
+    const keys = Object.values(INSTRUMENTS).join(',');
+    const url = `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${encodeURIComponent(keys)}`;
     
-    console.log('Fetching URL:', url.substring(0, 100));
+    console.log('Fetching:', url.substring(0, 120));
     
     const quoteRes = await fetch(url, { 
       headers: { 
@@ -35,26 +35,24 @@ export default async function handler(req, res) {
         'Accept': 'application/json' 
       } 
     });
+    
     const quoteData = await quoteRes.json();
-    console.log('Status:', quoteRes.status);
-    console.log('Data keys:', Object.keys(quoteData.data || {}));
+    console.log('HTTP Status:', quoteRes.status);
+    console.log('Response status:', quoteData.status);
+    console.log('Data keys available:', JSON.stringify(Object.keys(quoteData.data || {})));
 
-    if (!quoteRes.ok) throw new Error(JSON.stringify(quoteData));
+    if (quoteData.status === 'error') throw new Error(JSON.stringify(quoteData.errors));
+    if (!quoteRes.ok) throw new Error(`HTTP ${quoteRes.status}`);
 
     const result = {};
-    const dataKeys = Object.keys(quoteData.data || {});
+    const availableKeys = Object.keys(quoteData.data || {});
     
-    // Map response keys back to our names
     for (const [name, instrKey] of Object.entries(INSTRUMENTS)) {
-      // Try exact match first, then case-insensitive
-      let q = quoteData.data?.[instrKey];
-      if (!q) {
-        // Try finding by partial match
-        const found = dataKeys.find(k => k.toLowerCase() === instrKey.toLowerCase());
-        if (found) q = quoteData.data[found];
+      const q = quoteData.data?.[instrKey];
+      if (!q) { 
+        console.log(`No data for [${instrKey}]`); 
+        continue; 
       }
-      if (!q) { console.log('No data for:', instrKey); continue; }
-      
       const ltp = q.last_price || 0;
       const prev = q.ohlc?.close || ltp;
       const ch = ltp - prev;
@@ -68,7 +66,7 @@ export default async function handler(req, res) {
       };
     }
 
-    console.log('Parsed result keys:', Object.keys(result));
+    console.log('Successfully parsed:', Object.keys(result));
 
     // Sector mood
     const sectors = ['niftyit','niftyauto','niftypharma','niftyfmcg','niftymetal','niftyrealty','niftyenergy','niftyinfra'];
@@ -82,10 +80,9 @@ export default async function handler(req, res) {
       bullCount, bearCount
     };
 
-    // Include raw data keys for debugging
-    result._availableKeys = dataKeys;
-
+    result._availableKeys = availableKeys;
     return res.status(200).json(result);
+
   } catch (err) {
     console.error('Market error:', err.message);
     return res.status(500).json({ error: err.message });
