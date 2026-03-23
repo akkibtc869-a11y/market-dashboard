@@ -19,31 +19,32 @@ export default async function handler(req, res) {
   res.setHeader('Pragma', 'no-cache');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Use env token directly — no OAuth needed
   const token = process.env.UPSTOX_ACCESS_TOKEN;
-  if (!token) return res.status(500).json({ error: 'UPSTOX_ACCESS_TOKEN not set in Vercel env' });
+  if (!token) return res.status(500).json({ error: 'UPSTOX_ACCESS_TOKEN not set' });
 
   try {
-    const keys = Object.values(INSTRUMENTS).join(',');
-    const url = `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${encodeURIComponent(keys)}`;
+    // Fetch one by one to find which keys work
+    const results = {};
     
-    const quoteRes = await fetch(url, { 
-      headers: { 
-        'Authorization': `Bearer ${token}`, 
-        'Accept': 'application/json' 
-      } 
-    });
-    
-    const quoteData = await quoteRes.json();
-    console.log('HTTP Status:', quoteRes.status);
-    console.log('Response keys:', JSON.stringify(Object.keys(quoteData.data || {})));
-
-    if (quoteData.status === 'error') throw new Error(JSON.stringify(quoteData.errors));
+    for (const [name, key] of Object.entries(INSTRUMENTS)) {
+      try {
+        const url = `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${encodeURIComponent(key)}`;
+        const r = await fetch(url, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+        });
+        const d = await r.json();
+        const dataKey = Object.keys(d.data || {})[0];
+        console.log(`${name} [${key}] → status:${r.status} dataKey:${dataKey}`);
+        if (dataKey && d.data[dataKey]?.last_price) {
+          results[name] = d.data[dataKey];
+        }
+      } catch(e) {
+        console.log(`${name} error:`, e.message);
+      }
+    }
 
     const result = {};
-    for (const [name, instrKey] of Object.entries(INSTRUMENTS)) {
-      const q = quoteData.data?.[instrKey];
-      if (!q) continue;
+    for (const [name, q] of Object.entries(results)) {
       const ltp = q.last_price || 0;
       const prev = q.ohlc?.close || ltp;
       const ch = ltp - prev;
@@ -57,7 +58,8 @@ export default async function handler(req, res) {
       };
     }
 
-    // Sector mood
+    console.log('Final parsed keys:', Object.keys(result));
+
     const sectors = ['niftyit','niftyauto','niftypharma','niftyfmcg','niftymetal','niftyrealty','niftyenergy','niftyinfra'];
     let bullCount = 0, bearCount = 0;
     sectors.forEach(s => { if (result[s]) { result[s].up ? bullCount++ : bearCount++; } });
