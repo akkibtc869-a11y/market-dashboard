@@ -1,6 +1,6 @@
 const INSTRUMENTS = {
   nifty:       'NSE_INDEX|Nifty 50',
-  sensex:      'BSE_INDEX|Sensex',
+  sensex:      'BSE_INDEX|S&P BSE SENSEX',
   banknifty:   'NSE_INDEX|Nifty Bank',
   vix:         'NSE_INDEX|India VIX',
   niftyit:     'NSE_INDEX|Nifty IT',
@@ -13,10 +13,9 @@ const INSTRUMENTS = {
   niftyinfra:  'NSE_INDEX|Nifty Infra',
 };
 
-// Upstox returns keys with colon instead of pipe
 const RESPONSE_KEY_MAP = {
   nifty:       'NSE_INDEX:Nifty 50',
-  sensex:      'BSE_INDEX:Sensex',
+  sensex:      'BSE_INDEX:S&P BSE SENSEX',
   banknifty:   'NSE_INDEX:Nifty Bank',
   vix:         'NSE_INDEX:India VIX',
   niftyit:     'NSE_INDEX:Nifty IT',
@@ -49,6 +48,10 @@ export default async function handler(req, res) {
     
     if (quoteData.status === 'error') throw new Error(JSON.stringify(quoteData.errors));
 
+    // Log all available keys to find Sensex
+    const availKeys = Object.keys(quoteData.data || {});
+    console.log('All available keys:', JSON.stringify(availKeys));
+
     const result = {};
     for (const [name, responseKey] of Object.entries(RESPONSE_KEY_MAP)) {
       const q = quoteData.data?.[responseKey];
@@ -65,8 +68,6 @@ export default async function handler(req, res) {
         raw: ltp
       };
     }
-
-    console.log('Parsed keys:', Object.keys(result));
 
     const sectors = ['niftyit','niftyauto','niftypharma','niftyfmcg','niftymetal','niftyrealty','niftyenergy','niftyinfra'];
     let bullCount = 0, bearCount = 0;
