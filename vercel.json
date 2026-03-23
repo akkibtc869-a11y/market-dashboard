@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/market", "destination": "/api/market.js" },
+    { "source": "/api/news", "destination": "/api/news.js" }
+  ]
+}
