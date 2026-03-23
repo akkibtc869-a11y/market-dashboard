@@ -13,6 +13,22 @@ const INSTRUMENTS = {
   niftyinfra:  'NSE_INDEX|Nifty Infra',
 };
 
+// Upstox returns keys with colon instead of pipe
+const RESPONSE_KEY_MAP = {
+  nifty:       'NSE_INDEX:Nifty 50',
+  sensex:      'BSE_INDEX:Sensex',
+  banknifty:   'NSE_INDEX:Nifty Bank',
+  vix:         'NSE_INDEX:India VIX',
+  niftyit:     'NSE_INDEX:Nifty IT',
+  niftyauto:   'NSE_INDEX:Nifty Auto',
+  niftypharma: 'NSE_INDEX:Nifty Pharma',
+  niftyfmcg:   'NSE_INDEX:Nifty FMCG',
+  niftymetal:  'NSE_INDEX:Nifty Metal',
+  niftyrealty: 'NSE_INDEX:Nifty Realty',
+  niftyenergy: 'NSE_INDEX:Nifty Energy',
+  niftyinfra:  'NSE_INDEX:Nifty Infra',
+};
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -23,28 +39,20 @@ export default async function handler(req, res) {
   if (!token) return res.status(500).json({ error: 'UPSTOX_ACCESS_TOKEN not set' });
 
   try {
-    // Fetch one by one to find which keys work
-    const results = {};
+    const keys = Object.values(INSTRUMENTS).join(',');
+    const url = `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${encodeURIComponent(keys)}`;
     
-    for (const [name, key] of Object.entries(INSTRUMENTS)) {
-      try {
-        const url = `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${encodeURIComponent(key)}`;
-        const r = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-        });
-        const d = await r.json();
-        const dataKey = Object.keys(d.data || {})[0];
-        console.log(`${name} [${key}] → status:${r.status} dataKey:${dataKey}`);
-        if (dataKey && d.data[dataKey]?.last_price) {
-          results[name] = d.data[dataKey];
-        }
-      } catch(e) {
-        console.log(`${name} error:`, e.message);
-      }
-    }
+    const quoteRes = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    });
+    const quoteData = await quoteRes.json();
+    
+    if (quoteData.status === 'error') throw new Error(JSON.stringify(quoteData.errors));
 
     const result = {};
-    for (const [name, q] of Object.entries(results)) {
+    for (const [name, responseKey] of Object.entries(RESPONSE_KEY_MAP)) {
+      const q = quoteData.data?.[responseKey];
+      if (!q) { console.log('Missing:', responseKey); continue; }
       const ltp = q.last_price || 0;
       const prev = q.ohlc?.close || ltp;
       const ch = ltp - prev;
@@ -58,7 +66,7 @@ export default async function handler(req, res) {
       };
     }
 
-    console.log('Final parsed keys:', Object.keys(result));
+    console.log('Parsed keys:', Object.keys(result));
 
     const sectors = ['niftyit','niftyauto','niftypharma','niftyfmcg','niftymetal','niftyrealty','niftyenergy','niftyinfra'];
     let bullCount = 0, bearCount = 0;
